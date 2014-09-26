@@ -6,7 +6,7 @@ class AssocOptions
   attr_accessor(
     :foreign_key,
     :class_name,
-    :primary_key
+    :primary_key,
   )
 
   def model_class
@@ -52,14 +52,18 @@ module Associatable
   # Phase IIIb
   def belongs_to(name, options = {})
     options = BelongsToOptions.new(name, options)
+    assoc_options[name] = options
 
     define_method(name) do
-      options.model_class.find(self.send(options.foreign_key))
+      options.model_class.where({
+        options.primary_key => self.send(options.foreign_key)
+      }).first
     end
   end
 
   def has_many(name, options = {})
     options = HasManyOptions.new(name, self.name, options)
+    assoc_options[name] = options
 
     define_method(name) do
       options.model_class.where({
@@ -69,7 +73,7 @@ module Associatable
   end
 
   def assoc_options
-    # Wait to implement this in Phase IVa. Modify `belongs_to`, too.
+    @assoc_options ||= Hash.new
   end
 end
 

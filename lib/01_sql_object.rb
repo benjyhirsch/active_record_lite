@@ -5,20 +5,18 @@ require 'active_support/inflector'
 
 class SQLObject
   def self.columns
-    column_syms = DBConnection.execute(<<-SQL)
+    DBConnection.execute(<<-SQL)
       PRAGMA table_info(#{table_name})
     SQL
       .map{ |row| row["name"].underscore.to_sym }
-    column_syms.each do |sym|
+  end
+
+  def self.finalize!
+    columns.each do |sym|
       define_method(sym) { attributes[sym] }
 
       define_method("#{sym}="){ |value| attributes[sym] = value }
     end
-
-    column_syms
-  end
-
-  def self.finalize!
   end
 
   def self.table_name=(table_name)
@@ -62,10 +60,9 @@ class SQLObject
   end
 
   def initialize(params = {})
-    @attributes = Hash.new
     params.each do |key, value|
       if self.class.columns.include?(key.to_sym)
-        @attributes[key.to_sym] = value
+        attributes[key.to_sym] = value
       else
         raise "unknown attribute '#{key}'"
       end
@@ -73,11 +70,11 @@ class SQLObject
   end
 
   def attributes
-    @attributes
+    @attributes ||= Hash.new
   end
 
   def attribute_values
-    @attributes.values
+    attributes.values
   end
 
   def insert
@@ -90,7 +87,7 @@ class SQLObject
           VALUES
             (#{question_marks})
         SQL
-    @attributes[:id] = DBConnection.last_insert_row_id
+    attributes[:id] = DBConnection.last_insert_row_id
   end
 
   def update
@@ -104,7 +101,7 @@ class SQLObject
           WHERE
             id = #{id}
         SQL
-    @attributes[:id] = DBConnection.last_insert_row_id
+    attributes[:id] = DBConnection.last_insert_row_id
   end
 
   def save
