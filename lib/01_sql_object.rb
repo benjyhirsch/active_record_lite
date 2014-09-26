@@ -5,10 +5,14 @@ require 'active_support/inflector'
 
 class SQLObject
   def self.columns
-    DBConnection.execute(<<-SQL)
-      PRAGMA table_info(#{table_name})
+    DBConnection.execute2(<<-SQL)
+      SELECT
+        *
+      FROM
+        #{table_name}
+      LIMIT 1
     SQL
-      .map{ |row| row["name"].underscore.to_sym }
+      .first.map(&:to_sym)
   end
 
   def self.finalize!
@@ -62,7 +66,7 @@ class SQLObject
   def initialize(params = {})
     params.each do |key, value|
       if self.class.columns.include?(key.to_sym)
-        attributes[key.to_sym] = value
+        send("#{key}=", value)
       else
         raise "unknown attribute '#{key}'"
       end
@@ -87,7 +91,7 @@ class SQLObject
           VALUES
             (#{question_marks})
         SQL
-    attributes[:id] = DBConnection.last_insert_row_id
+    self.id = DBConnection.last_insert_row_id
   end
 
   def update
@@ -101,7 +105,7 @@ class SQLObject
           WHERE
             id = #{id}
         SQL
-    attributes[:id] = DBConnection.last_insert_row_id
+    self.id = DBConnection.last_insert_row_id
   end
 
   def save
