@@ -3,10 +3,9 @@ require_relative '01_sql_object'
 
 module Searchable
   def where(params)
-    keys, values = params.to_a.transpose
-    where_str = keys.map{ |key| "#{key} = ?"}.join(" AND ")
+    where_str = params.keys.map{ |key| "#{key} = ?"}.join(" AND ")
 
-    arr = DBConnection.execute(<<-SQL, *values)
+    arr = DBConnection.execute(<<-SQL, *params.values)
           SELECT
             *
           FROM
